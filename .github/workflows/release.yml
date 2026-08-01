@@ -9,52 +9,61 @@ permissions:
   contents: write
 
 jobs:
-  build:
-    name: build ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-          - target: aarch64-apple-darwin
-            os: macos-latest
-          - target: x86_64-apple-darwin
-            os: macos-latest
+  test:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-
-      - name: Install Rust
-        run: |
-          rustup toolchain install stable --profile minimal
-          rustup target add ${{ matrix.target }}
-
-      - uses: actions/cache@v5
+      - uses: actions/setup-go@v6
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ matrix.target }}-cargo-${{ hashFiles('Cargo.lock') }}
-
-      # ripgrep is a hard runtime dependency, so the test suite needs it here
-      # too — a green build without rg would prove nothing.
-      - name: Install ripgrep
+          go-version: "1.24"
+          cache: true
+      # ripgrep is a hard runtime dependency; a green build without it would
+      # prove nothing about whether scout actually works.
+      - run: sudo apt-get update && sudo apt-get install -y ripgrep
+      - run: gofmt -l . | tee /tmp/fmt && [ ! -s /tmp/fmt ]
+      - run: go vet ./...
+      - run: go test ./...
+      - name: Smoke test against this repo
         run: |
-          if [ "$RUNNER_OS" = "Linux" ]; then sudo apt-get update && sudo apt-get install -y ripgrep
-          else brew install ripgrep; fi
+          go build -o scout .
+          ./scout doctor
+          ./scout search extractBody . | tee /tmp/out
+          grep -q '\[def\]' /tmp/out
 
-      - run: cargo test --release --target ${{ matrix.target }}
-      - run: cargo build --release --target ${{ matrix.target }}
-
-      - name: Stage artifact
-        run: cp target/${{ matrix.target }}/release/scout scout-${{ matrix.target }}
-
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+          - goos: linux
+            goarch: arm64
+          - goos: darwin
+            goarch: amd64
+          - goos: darwin
+            goarch: arm64
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: "1.24"
+          cache: true
+      # Pure stdlib, so every target cross-compiles from one runner with CGO
+      # off — no per-OS runner, no toolchain matrix.
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: "0"
+        run: |
+          go build -trimpath -ldflags="-s -w" \
+            -o "scout-${{ matrix.goos }}-${{ matrix.goarch }}" .
       - uses: actions/upload-artifact@v4
         with:
-          name: scout-${{ matrix.target }}
-          path: scout-${{ matrix.target }}
+          name: scout-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: scout-${{ matrix.goos }}-${{ matrix.goarch }}
 
   publish:
     needs: build
@@ -64,8 +73,8 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
-      # The tag may already carry a release created by hand (that is how v0.1.0
-      # shipped), so upload into it rather than failing on "already exists".
+      # The tag may already carry a release created by hand, so upload into it
+      # rather than failing on "already exists".
       - name: Publish release
         run: |
           if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then

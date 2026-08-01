@@ -1,4 +1,7 @@
-target/
+# built binary
+/scout
+scout-*-*
+
 __pycache__/
 *.pyc
 

@@ -23,8 +23,8 @@ note: 4 file(s) holding a definition are not on this page
 repro: rg -n --no-heading -F -e useState .
 ```
 
-One Rust binary. **No index, no daemon, no state on disk.** One hard dependency:
-`rg`.
+One static Go binary, stdlib only. **No index, no daemon, no state on disk.**
+One hard dependency: `rg`.
 
 ---
 
@@ -58,19 +58,23 @@ python3 bench/invariants.py /path/to/your/repo
 
 ## Install
 
-**From a release** (Linux x86_64):
-
 ```bash
-curl -fsSL https://github.com/MakFly/codescout/releases/latest/download/scout-x86_64-unknown-linux-gnu \
-  -o ~/.local/bin/scout && chmod +x ~/.local/bin/scout
-scout doctor
+curl -fsSL https://raw.githubusercontent.com/MakFly/codescout/main/install.sh | sh
 ```
 
-**From source** (needs Rust and `rg` on PATH):
+Linux and macOS, amd64 and arm64. The script picks the right build, installs to
+`~/.local/bin` (override with `SCOUT_INSTALL_DIR`), verifies the binary runs,
+and tells you if `rg` is missing or the directory is not on your `PATH`.
+
+**From source** (needs Go 1.24+ and `rg` on PATH):
 
 ```bash
-cargo install --git https://github.com/MakFly/codescout
+go install github.com/MakFly/codescout@latest   # installs as `codescout`
+# or, to get the short `scout` name:
+git clone https://github.com/MakFly/codescout && cd codescout && go build -o ~/.local/bin/scout .
 ```
+
+Then check it: `scout doctor`.
 
 ## Usage
 
@@ -140,6 +144,11 @@ the rest.
   tokens by no resolvable amount on either harness. It stayed, opt-in and
   documented, rather than being shipped on a hunch. See
   [BENCHMARKS.md](BENCHMARKS.md).
+- **The numbers above were measured on a Rust implementation**, which this Go
+  one replaced in v0.2.0. They still stand because the port was accepted only
+  after **1,077 invocations across two codebases came back byte-for-byte
+  identical** — stdout, stderr and exit code — to the binary that produced them.
+  See [BENCHMARKS.md](BENCHMARKS.md#6-the-go-port-v020).
 
 ## What it deliberately does not do
 

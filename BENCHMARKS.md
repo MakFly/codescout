@@ -11,7 +11,7 @@ static bench and invariant harnesses are, and derive their queries from whatever
 repo you point them at.
 
 Tooling: `rg` 15.1.0, `rtk` 0.44.1, `claude` 2.1.220, `codex` 0.146.0,
-rustc 1.93.1, 16 cores.
+Go 1.26.2 (rustc 1.93.1 for the v0.1.0 reference), 16 cores.
 
 ---
 
@@ -148,6 +148,58 @@ without a token win does not justify the complexity, so `--body` ships at 0.
   campaigns run on different repo states are therefore never mixed in one table;
   each campaign re-measures every arm, native and rtk included. Measure on a
   versioned tree, or record the commit.
+
+## 6. The Go port (v0.2.0)
+
+v0.1.0 was Rust. v0.2.0 is Go, stdlib only — one toolchain cross-compiles every
+target with `CGO_ENABLED=0`, which is what makes a one-line `curl | sh` install
+possible for Linux and macOS on both architectures.
+
+**The risk that mattered was not performance, it was evidence.** Every number in
+this document is attached to one binary's exact output. A rewrite invalidates
+all of it unless the new binary is indistinguishable from the old, so that was
+the acceptance criterion, decided before a line was written:
+
+> stdout, stderr and exit code identical, byte for byte, across a large corpus.
+
+`bench/parity.py` in the private lab runs both binaries side by side over
+derived identifier corpora, the flag combinations that switch code paths
+(`--explain`, `--json`, `--body`, `--kind symbol`, `--page`, `--budget-tokens`,
+`-i`, `--no-guard`, `--lang`), multi-word prose that triggers the term-coverage
+fallback, and the regex class that triggers passthrough.
+
+| corpus | cases | identical |
+|---|---|---|
+| repo B | 524 | **524** |
+| repo A | 553 | **553** |
+
+Two normalisations, both justified by a control rather than asserted: the
+wall-clock `Nms` field, and the fact that `rg` walks files in parallel so
+passthrough line *order* varies between two runs of the same binary. The harness
+therefore runs the **reference against itself** on every case first and splits
+the corpus. 9 cases across both repos could not reproduce against the reference
+itself — all of them capped passthrough, where which lines land before the byte
+cap depends on rg's ordering. Those are excluded from strict comparison and
+checked by the I1 invariant against the Go binary directly, which passes 8/8
+patterns on both repos.
+
+Three real defects were found this way and would not have been found by reading
+the code:
+
+1. **JSON floats.** Rust serialises an `f32` through an `f64` writer, giving
+   `0.4627804458141327`; Go's shortest-`float32` form is `0.46278045`. Same
+   value, different bytes.
+2. **JSON escaping and key order.** Go escapes `<` as `\u003c` and orders struct
+   fields by declaration; serde escapes neither and orders map keys
+   alphabetically.
+3. **A wrapped string literal.** Rust's `\`-continuation strips the leading
+   whitespace of the wrapped line; the Go translation had kept nine spaces of
+   indent in the fallback warning.
+
+After the port, the invariants and the static bench were re-run against the Go
+binary on both repos: I1–I4 hold (0/200, 0/200, 0 mismatches), def-recall is
+unchanged at 90.1 % on repo B, compression unchanged at 29.7× vs `rg` and 3.5×
+vs rtk, and latency p50 is 12 ms against the reference's 12 ms.
 
 ## Kill criteria, written in advance
 
