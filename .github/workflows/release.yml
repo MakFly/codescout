@@ -64,7 +64,14 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
+      # The tag may already carry a release created by hand (that is how v0.1.0
+      # shipped), so upload into it rather than failing on "already exists".
       - name: Publish release
-        run: gh release create "${GITHUB_REF_NAME}" scout-* --generate-notes --repo "$GITHUB_REPOSITORY"
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" scout-* --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$GITHUB_REF_NAME" scout-* --generate-notes --repo "$GITHUB_REPOSITORY"
+          fi
         env:
           GH_TOKEN: ${{ github.token }}
