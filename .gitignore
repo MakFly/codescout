@@ -1,0 +1,10 @@
+target/
+__pycache__/
+*.pyc
+
+# session debris, never deliverables
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.webp
