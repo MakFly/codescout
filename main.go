@@ -61,7 +61,7 @@ OPTIONS:
 
 Use it for identifier and definition lookups. For following a trail or reading a
 file, native tools cost fewer turns — see
-https://github.com/MakFly/codescout#use-it-for-lookups-not-for-exploration
+https://github.com/dev-toolings/codescout#use-it-for-lookups-not-for-exploration
 `
 
 // parseSearch accepts flags interleaved with positionals, the way clap does.
