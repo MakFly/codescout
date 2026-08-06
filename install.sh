@@ -1,7 +1,7 @@
 #!/bin/sh
 # codescout installer — Linux and macOS, amd64 and arm64.
 #
-#   curl -fsSL https://raw.githubusercontent.com/MakFly/codescout/main/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/dev-toolings/codescout/main/install.sh | sh
 #
 # Environment:
 #   SCOUT_INSTALL_DIR   where to put the binary (default: first writable of
@@ -12,7 +12,7 @@
 
 set -eu
 
-REPO="MakFly/codescout"
+REPO="dev-toolings/codescout"
 BIN="scout"
 
 say()  { printf '%s\n' "$*"; }

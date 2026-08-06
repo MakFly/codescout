@@ -59,7 +59,7 @@ python3 bench/invariants.py /path/to/your/repo
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/MakFly/codescout/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/dev-toolings/codescout/main/install.sh | sh
 ```
 
 Linux and macOS, amd64 and arm64. The script picks the right build, installs to
@@ -69,9 +69,9 @@ and tells you if `rg` is missing or the directory is not on your `PATH`.
 **From source** (needs Go 1.24+ and `rg` on PATH):
 
 ```bash
-go install github.com/MakFly/codescout@latest   # installs as `codescout`
+go install github.com/dev-toolings/codescout@latest   # installs as `codescout`
 # or, to get the short `scout` name:
-git clone https://github.com/MakFly/codescout && cd codescout && go build -o ~/.local/bin/scout .
+git clone https://github.com/dev-toolings/codescout && cd codescout && go build -o ~/.local/bin/scout .
 ```
 
 Then check it: `scout doctor`.
